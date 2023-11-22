@@ -1,0 +1,78 @@
+---
+title: "Dynamic Summary Measures"
+author: "Yanling Li & Linying Ji"
+date: "2023-05-05"
+output:
+  html_document: default
+  word_document: default
+---
+
+
+
+## Overview
+
+Dynamic features obtained from digital health measures collected over an extended period allow for continuous monitoring and longitudinal analysis of various physiological and behavioral data, which can be invaluable in understanding the trends and patterns in recovery pathways of individuals suffering from Long COVID. 
+
+This tutorial shows how to derive dynamic features from individuals' physiological time-series data using the `tsfeatures` R package. We use data from the Continuously Annotated Signals of Emotion (CASE) study where physiological signals, including cardiac, muscle, and electrodermal activities, respiration trace, and skin temperature were recorded. In this tutorial, we will illustrate how to extract dynamic features based on the heart rate data (i.e., the `ECG_Rate` variable in the dataset).
+
+Example dynamic features include: 
+
+- max_level_shift: the largest shift in means between two consecutive sliding windows
+- max_var_shift: the largest shift in variances between two consecutive sliding windows
+- hurst: a measure of the long-term memory of a time series, indexing the rate at which the autocorrelation of a series decreases with increasing lags 
+- ARCH_LM: a measure of the heterogeneity of a time series
+- std1st_der: the standard deviation of the first derivative of the time series
+
+First, load packages and read data. For illustration purposes, we use data from one randomly selected participant.
+
+```{r,message=F,warning=F}
+library(tsfeatures)#extract dynamic features
+library(zoo)
+library(dplyr)
+library(ggnewscale)
+library(ggsci)
+library(ggplot2)
+source('SelectFunctions.r')
+```
+
+```{r}
+#setwd()
+data = read.csv("hrdata_missing.csv")
+head(data)
+```
+
+When you have intensive longitudinal data (ILD), you often want to start by visually exploring the data. Here we use our custom function, `plotDatwMissingInd()`, to plot our data with missing data indicators.
+
+```{r,warning=FALSE}
+data$isMissing = ifelse(is.na(data$ECG_Rate),1,0)
+plotDatwMissingInd(thedat=data,ID_Name="ID", y_Name=c("ECG_Rate"), 
+  R_Name = c("isMissing"), 
+  time_Name = "Time", ID_toPlot = 1)
+```
+
+Then another custom function, `Dynamic_feature()`, is used to extract dynamic features of heart rate data. 
+
+```{r}
+feature_table = Dynamic_feature(data, "ECG_Rate")
+feature_table[201:210,1:2]
+```
+
+The following plots show how these dynamic features change over time. 
+
+```{r,warning=FALSE}
+ggplot(data=feature_table, aes(x=Time, y=ECG_Rate_max_level_shift)) +
+  geom_line() +
+  xlab("Time") + 
+  ggtitle("The largest shift in means between two windows")
+  
+```
+
+```{r,warning=FALSE}
+ 
+ggplot(feature_table, aes(x=Time, y=ECG_Rate_max_var_shift)) +
+  geom_line() +
+  xlab("Time") + 
+  ggtitle("The largest shift in variances between two windows")
+  
+```
+
